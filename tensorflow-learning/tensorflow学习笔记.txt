@@ -1,0 +1,47 @@
+Nodes: operators, variables, and constants
+
+节点：运算符，变量，常量，
+Edges: tensors
+边：张量
+
+
+创建一个会话，赋给一个变量sess，后续可以使用它。
+
+import tensorflow as tf
+a = tf.add(3, 5)
+sess = tf.Session()
+print sess.run(a)
+sess.close()
+
+
+或者
+
+with tf.Session() as sess:
+    print sess.run(a)
+
+会话封装执行操作对象的环境，对张量进行评估。
+
+x = 2
+y = 3
+op1 = tf.add(x, y)
+op2 = tf.mul(x, y)
+op3 = tf.pow(op2, op1)
+with tf.Session() as sess:
+   op3 = sess.run(op3)
+
+
+*********************************************************************
+
+运行tensorflow程序
+D:\programs\python35\python 
+
+启动tensorboard查看运行的参数变化
+D:\programs\python35\Scripts\tensorboard --logdir="./graphs"
+
+
+
+
+
+
+
+
