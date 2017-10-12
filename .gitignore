@@ -4,3 +4,9 @@ tensorflow-learning/lineregress/graphs/
 tensorflow-learning/my_graph/
 tensorflow-learning/graphs-set/
 otherDeeplearningExamples/generateTxtByRNN/myData/
+tensorflow-learning/word2vec/.my_graph/
+tensorflow-learning/word2vec/__pycache__/
+tensorflow-learning/word2vec/checkpoints/
+tensorflow-learning/word2vec/processed/
+tensorflow-learning/word2vec/improved_graph/
+tensorflow-learning/word2vec/w2v_exter_files/
