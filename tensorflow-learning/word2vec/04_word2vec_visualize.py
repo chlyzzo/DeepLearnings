@@ -98,7 +98,7 @@ class SkipGramModel:
         with tf.device('/cpu:0'):
             self.optimizer = tf.train.GradientDescentOptimizer(self.lr).minimize(self.loss, 
                                                               global_step=self.global_step)
-
+    #保存优化的值，可以在tensorboard中查看，通过图形查看
     def _create_summaries(self):
         with tf.name_scope("summaries"):
             tf.summary.scalar("loss", self.loss)
