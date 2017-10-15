@@ -141,30 +141,6 @@ def train_model(model, batch_gen, num_train_steps, weights_fld):
                 print('Average loss at step {}: {:5.1f}'.format(index, total_loss / SKIP_STEP))
                 total_loss = 0.0
                 saver.save(sess, 'checkpoints/skip-gram', index)
-        
-        ####################
-        # code to visualize the embeddings. uncomment the below to visualize embeddings
-        # run "'tensorboard --logdir='processed'" to see the embeddings
-        # final_embed_matrix = sess.run(model.embed_matrix)
-        
-        # # it has to variable. constants don't work here. you can't reuse model.embed_matrix
-        # embedding_var = tf.Variable(final_embed_matrix[:1000], name='embedding')
-        # sess.run(embedding_var.initializer)
-
-        # config = projector.ProjectorConfig()
-        # summary_writer = tf.summary.FileWriter('processed')
-
-        # # add embedding to the config file
-        # embedding = config.embeddings.add()
-        # embedding.tensor_name = embedding_var.name
-        
-        # # link this tensor to its metadata file, in this case the first 500 words of vocab
-        # embedding.metadata_path = 'processed/vocab_1000.tsv'
-
-        # # saves a configuration file that TensorBoard will read during startup.
-        # projector.visualize_embeddings(summary_writer, config)
-        # saver_embed = tf.train.Saver([embedding_var])
-        # saver_embed.save(sess, 'processed/model3.ckpt', 1)
 
 def main():
     model = SkipGramModel(VOCAB_SIZE, EMBED_SIZE, BATCH_SIZE, NUM_SAMPLED, LEARNING_RATE)
