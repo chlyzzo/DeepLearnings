@@ -35,10 +35,20 @@ Created on 2017-10-12
 
 import tensorflow as tf
 
-filename_queue = tf.train.string_input_producer(["file0.csv", "file1.csv"])
+filename_queue = tf.train.string_input_producer(["data/file0.csv", "data/file1.csv"],num_epochs=1)
 reader = tf.TextLineReader()
 key, value = reader.read(filename_queue)
 
-
+with tf.Session() as sess:
+    sess.run(tf.local_variables_initializer())
+    tf.train.start_queue_runners()
+    num_examples = 0
+    try:
+        while True:
+                s_key, s_value = sess.run([key, value])
+                print( s_key, s_value)
+        num_examples += 1
+    except tf.errors.OutOfRangeError:
+            print ("There are", num_examples, "examples")
 
 
