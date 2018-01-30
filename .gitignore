@@ -10,3 +10,4 @@ tensorflow-learning/word2vec/checkpoints/
 tensorflow-learning/word2vec/processed/
 tensorflow-learning/word2vec/improved_graph/
 tensorflow-learning/word2vec/w2v_exter_files/
+.settings/

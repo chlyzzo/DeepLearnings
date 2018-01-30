@@ -1,0 +1,17 @@
+
+1，安装pandas
+进入到python的pip.exe
+pip3 install -U pandas
+
+2，安装sklearn
+pip3 install -U scikit-learn
+
+3,如果出现错误，更新Numpy
+
+4，安装scipy
+pip3 install -U scipy
+
+5，如果下载很慢，可以使用豆瓣的包，
+-i http://pypi.douban.com/simple --trusted-host pypi.douban.com
+
+
