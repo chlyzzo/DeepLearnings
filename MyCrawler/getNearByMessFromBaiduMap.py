@@ -7,7 +7,6 @@ Created on 2018-01-19
 http://lbsyun.baidu.com/index.php?title=webapi/guide/webservice-placeapi
 周边检索详见参数
 
-秘钥=6OOOB36qGtsQZWOKXGgkAH8AQuux11YG
 
 '''
 
@@ -62,6 +61,11 @@ comm_id,lat,lng,queryWord,
 
 '''
 def readCommLatLngGetBaiduMess(file,saveFile,label):
+        
+    keys = ['ak=*****']
+    key = keys[0]
+    akLen = len(keys)
+    useAKKEYID = 1
     f = open(file,'r',encoding='utf-8')
     line = f.readline()
     vs = line.split('\t')
@@ -70,16 +74,29 @@ def readCommLatLngGetBaiduMess(file,saveFile,label):
             commId = vs[0]
             lat = vs[2]
             lng = vs[3]
-            listMap = getListMapMessByCommMess(commId,lat,lng,label)#获得信息
-            outResult = getOneListMapToSting(listMap,label)#信息格式处理
-            appendWriteCommDataBase(outResult,commId,saveFile)#写进保存文件中
-            time.sleep(2)
+            listMap = getListMapMessByCommMess(commId,lat,lng,label,key)#获得信息
+            #判断获得的数据是否正确，即是否超量，
+            if (listMap=='error'):
+                print('error')
+                return 'error'
+            elif (listMap=='302'):#判断key的使用是否超量
+                print('超限')
+                if (useAKKEYID<akLen):
+                    key = keys[useAKKEYID]
+                    useAKKEYID = useAKKEYID + 1#ak用的后移一个
+                else:
+                    return 'error'
+            else:
+                outResult = getOneListMapToSting(listMap,label)#信息格式处理
+                appendWriteCommDataBase(outResult,commId,saveFile)#写进保存文件中
+            time.sleep(1)
             line = f.readline()
             vs = line.split('\t')
         else:
             break   
          
-    f.close()              
+    f.close()
+    return 'ok'              
 
 '''
 根据一个小区的经纬度信息，爬取其周边指定的标签数据
@@ -91,25 +108,30 @@ http://lbsyun.baidu.com/index.php?title=lbscloud/poitags
 tag=一级行业分类，二级行业分类，
 ak
 pKx1umPLme6VloE24RirnXiS3tPfba4O
-vj0goyn1bffZwsjk3C8KH3G9
-DqBFd4FXWonuaMNfGDRU0eEm
-DD279b2a90afdf0ae7a3796787a0742e
+vj0goyn1bffZwsjk3C8KH3G9,可用
+DqBFd4FXWonuaMNfGDRU0eEm，可用
 '''    
-def getListMapMessByCommMess(commId,lat,lng,label):
-    key='ak=DqBFd4FXWonuaMNfGDRU0eEm'
+def getListMapMessByCommMess(commId,lat,lng,label,akkey):
     #url查询
     location='location='+str(lat)+','+str(lng)
     queryPath = 'http://api.map.baidu.com/place/v2/search?radius=2000&output=json'
     queryUrlCode = urllib.parse.quote(label) #编码url形式
-    query = queryPath+'&'+'query='+queryUrlCode+'&'+key+'&'+location
-    result='{}'
+    query = queryPath+'&'+'query='+queryUrlCode+'&'+akkey+'&'+location
+    returnJson=json.loads('{}')
     try:
         resp = urllib.request.urlopen(query)
         respHtml = resp.read().decode('utf-8')
         resp.close()
         soup = BeautifulSoup(respHtml,from_encoding="utf-8")
         result = str(soup).replace('<html><head></head><body>','').replace('</body></html>','')
-        print(result)
+        #判断返回的值是否正确，如果是限量则换一个key，如果是其他报错，则直接退出
+        returnJson = json.loads(result)
+        print(commId)
+        if (returnJson.get('status',None)==302):
+            return '302'
+        elif (returnJson.get('message',None)!='ok'):
+            return 'error'   
+
     except urllib.error.URLError:
         #url获取错误
         time.sleep(20)#休息20秒
@@ -117,11 +139,11 @@ def getListMapMessByCommMess(commId,lat,lng,label):
         #其他异常
         time.sleep(10)#休息20秒      
     #json串转成List[Map[]]
-    listMap = json.loads(result).get('results',None)
+    listMap = returnJson.get('results',None)
     #如果没有获取到数据，则额外存储该小区，待后续再查
     if listMap is None:
         with open(noResultfilePath,'a',encoding='utf-8') as f:  
-            f.write(str(commId)+'\t'+str(lat)+'\t'+str(lng)+'\n')  
+            f.write(str(commId)+'\t'+str(lat)+'\t'+str(lng))  
     return listMap
                 
 #-------------------------------------------------------------------
@@ -129,9 +151,18 @@ def getListMapMessByCommMess(commId,lat,lng,label):
 '''
 主函数开始
 '''
-file = 'd:/input_comm_lat_lng.txt'
+# file = 'D:/comm_baidu_corpus/input_comm_lat_lng_7.txt'
 saveFile = 'd:/output_comm_baidu_mess.txt'
-readCommLatLngGetBaiduMess(file,saveFile,'银行')
-
-
-
+start = 15
+endFile = 165
+while (start<=endFile):
+    file = 'D:/comm_baidu_corpus/input_comm_lat_lng_'+str(start)+'.txt'
+    print(file)
+    oneFindStatus = readCommLatLngGetBaiduMess(file,saveFile,'银行')  
+    print(file+'....'+'end search.')  
+    if (oneFindStatus=='ok'):
+        start = start + 1
+    else:
+        print('error at=')
+        print(file)
+        break
