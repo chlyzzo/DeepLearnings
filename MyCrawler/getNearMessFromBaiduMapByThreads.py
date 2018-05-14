@@ -1,4 +1,4 @@
-#coding=utf-8
+﻿#coding=utf-8
 '''
 Created on 2018-02-23
 
@@ -12,12 +12,12 @@ Created on 2018-02-23
 '''
 
 import urllib
-from bs4 import BeautifulSoup
 import json
 import time
 import os
+from bs4 import BeautifulSoup
 
-noResultfilePath='d:/noresult_comm_baidu_mess.txt'
+noResultfilePath='/home/min/workspace/data/spiderDataSet/no_vppv_comm_baidu_corpus/noresult_comm_baidu_mess.txt'
 
 #所有的类别，每个小区周边的所有信息
 allLabels = ['中餐厅','外国餐厅','小吃快餐店','蛋糕甜品店','咖啡厅','茶座','酒吧',
@@ -77,6 +77,13 @@ def appendWriteCommDataBase(arrayString,comm_id,filePath):
                 f.write(writeLine)  
 
 '''
+去除掉换行符，用在一行的最后
+'''
+def replacenNewlineChar(inputStr):
+    newStr = inputStr.replace('\r\n','').replace('\r','').replace('\n','')
+    return newStr          
+
+'''
 读取小区的经纬度等信息，获取小区的附近数据点，
 comm_id,lat,lng,queryWord
 
@@ -85,7 +92,7 @@ comm_id,lat,lng,queryWord
 '''
 def readCommLatLngGetBaiduMess(file,saveFile):
         
-    keys = ['ak=*****']
+    keys = ['ak=******']
     key = keys[0]
     akLen = len(keys)
     useAKKEYID = 1
@@ -94,16 +101,16 @@ def readCommLatLngGetBaiduMess(file,saveFile):
     vs = line.split('\t')
     while 1:
         if line is not None and len(vs)==4:
-            commId = vs[0]
-            lat = vs[2]
-            lng = vs[3]
+            commId = replacenNewlineChar(vs[0])
+            lat = replacenNewlineChar(vs[2])
+            lng = replacenNewlineChar(vs[3])
+            print(file+'='+commId+'start')
             #所有类别遍历查询
             for label in allLabels:
                 listMap = getListMapMessByCommMess(commId,lat,lng,label,key)#获得信息
                 #判断获得的数据是否正确，即是否超量，
                 if (listMap=='error'):
-                    print('error')
-                    return 'error'
+                    print(label+'error')
                 elif (listMap=='302'):#判断key的使用是否超量
                     print('超限')
                     if (useAKKEYID<akLen):
@@ -111,11 +118,14 @@ def readCommLatLngGetBaiduMess(file,saveFile):
                         useAKKEYID = useAKKEYID + 1#ak用的后移一个
                     else:
                         return 'error'
+                elif (listMap is None or len(listMap)<1):
+                    print(label+' read mess is None')
                 else:
                     outResult = getOneListMapToSting(listMap,label)#返回信息格式处理
                     appendWriteCommDataBase(outResult,commId,saveFile)#结果写进保存文件中
-                time.sleep(1)
+                time.sleep(0.001)
             #下一个小区
+            print(file+'='+commId+'end')
             line = f.readline()
             vs = line.split('\t')
         else:
@@ -136,7 +146,7 @@ ak
 pKx1umPLme6VloE24RirnXiS3tPfba4O
 vj0goyn1bffZwsjk3C8KH3G9,可用
 DqBFd4FXWonuaMNfGDRU0eEm，可用
-
+MpZvU6f5YAv7P6jqu5FAyaoDmWSx0Hhw
 '''    
 def getListMapMessByCommMess(commId,lat,lng,label,akkey):
     #url查询
@@ -149,39 +159,37 @@ def getListMapMessByCommMess(commId,lat,lng,label,akkey):
         resp = urllib.request.urlopen(query)
         respHtml = resp.read().decode('utf-8')
         resp.close()
-        soup = BeautifulSoup(respHtml,from_encoding="utf-8")
-        result = str(soup).replace('<html><head></head><body>','').replace('</body></html>','')
+#         soup = BeautifulSoup(respHtml,from_encoding="utf-8")
+#         result = str(soup).replace('<html><head></head><body>','').replace('</body></html>','')
         #判断返回的值是否正确，如果是限量则换一个key，如果是其他报错，则直接退出
-        returnJson = json.loads(result)
-        print(commId)
+        returnJson = json.loads(respHtml)
         if (returnJson.get('status',None)==302):
-            writeNoResultIntoTxt(commId,lat,lng)
+            writeNoResultIntoTxt(commId,lat,lng,label)
             return '302'
         elif (returnJson.get('message',None)!='ok'):
-            writeNoResultIntoTxt(commId,lat,lng)
+            writeNoResultIntoTxt(commId,lat,lng,label)
             return 'error'   
 
     except urllib.error.URLError:
         #url获取错误
-        time.sleep(20)#休息20秒
+        time.sleep(0.2)#休息20秒
     except Exception:
         #其他异常
-        time.sleep(10)#休息20秒      
+        time.sleep(0.1)#休息20秒      
     #json串转成List[Map[]]
     listMap = returnJson.get('results',None)
     #如果没有获取到数据，则额外存储该小区，待后续再查
-    if listMap is None:
-        with open(noResultfilePath,'a',encoding='utf-8') as f:  
-            f.write(str(commId)+'\t'+str(lat)+'\t'+str(lng))  
+    if listMap is None or len(listMap)<1:
+        writeNoResultIntoTxt(commId,lat,lng,label)
     return listMap
 
 
 '''
 未找到的写进noresult-text里
 '''
-def writeNoResultIntoTxt(commId,lat,lng):
+def writeNoResultIntoTxt(commId,lat,lng,label):
     with open(noResultfilePath,'a',encoding='utf-8') as f:
-            f.write(str(commId)+'\t'+str(lat)+'\t'+str(lng))
+            f.write(str(commId)+'\t'+str(lat)+'\t'+str(lng)+'\t'+label+'\r\n')
 
 
 #=====================================
@@ -192,88 +200,99 @@ def writeNoResultIntoTxt(commId,lat,lng):
 import threading
 
 class myThread (threading.Thread):
-    def __init__(self, threadID, dirPath,name):
+    def __init__(self, threadID, fromdirPath,todirPath,name):
         threading.Thread.__init__(self)
         self.threadID = threadID
         self.name = name
-        self.dirPath = dirPath
+        self.fromdirPath = fromdirPath
+        self.todirPath = todirPath
         
     def run(self):
-        print ("开始线程：" + self.name)
-        getFileCommNearMessThread(self.dirPath,self.name)
-        print ("退出线程：" + self.name)
+        
+        getFileCommNearMessThread(self.fromdirPath,self.todirPath,self.name)
+        
 '''
 线程的操作
 每一份信息文件进行所有类别的爬取
 '''
-def getFileCommNearMessThread(dirPath,threadName):
-    vs = threadName.split(".")
-    saveFile = vs[0]+'_messout'+'.txt'
-    readCommLatLngGetBaiduMess(dirPath+'\\'+threadName,dirPath+'\\'+saveFile)
+def getFileCommNearMessThread(fromdirPath,todirPath,threadName):
+#     vs = threadName.split(".")
+    saveFile = threadName+'_messout'
+    readCommLatLngGetBaiduMess(fromdirPath+'/'+threadName,todirPath+'/'+saveFile)
     
-                
 #-------------------------------------------------------------------
 '''
 开始主函数获取信息
 '''
 #1，小区的分信息目录
-dirPath = 'D:\comm_baidu_corpus'
-files = os.listdir(dirPath)#获取目录下的所有文件
+fromdirPath = '/home/min/workspace/data/spiderDataSet/no_vppv_comm_baidu_corpus/no_vppv_comm_lat_lng_splits'
+todirPath = "/home/min/workspace/data/spiderDataSet/no_vppv_comm_baidu_corpus/no_vppv_comm_lat_lng_splits_messout"
+files = os.listdir(fromdirPath)#获取目录下的所有文件
+print(files)
 
-#2，创建线程
-thread1 = myThread(1, dirPath,files[0])
-thread2 = myThread(2, dirPath,files[1])
-thread3 = myThread(3, dirPath,files[2])
-thread4 = myThread(4, dirPath,files[3])
-thread5 = myThread(5, dirPath,files[4])
-thread6 = myThread(6, dirPath,files[5])
-thread7 = myThread(7, dirPath,files[6])
-thread8 = myThread(8, dirPath,files[7])
-thread9 = myThread(9, dirPath,files[8])
-thread10 = myThread(10, dirPath,files[9])
-
-#启动线程
-thread1.start()
-thread2.start()
-thread3.start()
-thread4.start()
-thread5.start()
-thread6.start()
-thread7.start()
-thread8.start()
-thread9.start()
-thread10.start()
-
-thread1.join()
-thread2.join()
-thread3.join()
-thread4.join()
-thread5.join()
-thread6.join()
-thread7.join()
-thread8.join()
-thread9.join()
-thread10.join()
+threadsList=[]
+count = 1
+for file in files:
+    t = myThread(count, fromdirPath,todirPath,file)
+    count = count + 1
+    threadsList.append(t)
+ 
+for t in threadsList:
+    t.start()
+     
+for t in threadsList:
+    t.join()
+    
+# #2，创建线程
+# thread1 = myThread(1, dirPath,files[0])
+# thread2 = myThread(2, dirPath,files[1])
+# thread3 = myThread(3, dirPath,files[2])
+# thread4 = myThread(4, dirPath,files[3])
+# thread5 = myThread(5, dirPath,files[4])
+# thread6 = myThread(6, dirPath,files[5])
+# thread7 = myThread(7, dirPath,files[6])
+# thread8 = myThread(8, dirPath,files[7])
+# thread9 = myThread(9, dirPath,files[8])
+# thread10 = myThread(10, dirPath,files[9])
+# 
+# #启动线程
+# thread1.setDaemon(True)
+# thread2.setDaemon(True)
+# thread3.setDaemon(True)
+# thread4.setDaemon(True)
+# thread5.setDaemon(True)
+# thread6.setDaemon(True)
+# thread7.setDaemon(True)
+# thread8.setDaemon(True)
+# thread9.setDaemon(True)
+# thread10.setDaemon(True)
+# 
+# thread1.start()
+# thread2.start()
+# thread3.start()
+# thread4.start()
+# thread5.start()
+# thread6.start()
+# thread7.start()
+# thread8.start()
+# thread9.start()
+# thread10.start()
+# 
+# thread1.join()
+# thread2.join()
+# thread3.join()
+# thread4.join()
+# thread5.join()
+# thread6.join()
+# thread7.join()
+# thread8.join()
+# thread9.join()
+# thread10.join()
 
 #观察结果
 print ("退出主线程")
 
-'''
-或者引入线程list
-threadList=[]
-count = 1
-for file in files:
-   t=myThread(count,dirPath,file)
-   count = count + 1
-   threadList.append(t)
 
-for t in threadList:
-    t.start()
-    
-for t in threadList:
-    t.join()
-    
-'''
 
 
 
