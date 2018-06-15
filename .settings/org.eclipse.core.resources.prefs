@@ -1,4 +1,8 @@
 eclipse.preferences.version=1
+encoding//HMM/currentHMM.py=utf-8
+encoding//HMM/progressHMMDataBase.py=utf-8
+encoding//HMM/stockHMM.py=utf-8
+encoding//HMM/trainHMMSegment.py=utf-8
 encoding//ML_works/sklearn_line_regress.py=utf-8
 encoding//MyCrawler/TestMaxThreads.py=utf-8
 encoding//MyCrawler/crawlerFromJRTouTiao.py=utf-8
